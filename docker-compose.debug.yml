@@ -3,6 +3,7 @@ version: '3.4'
 services:
   fencesserver:
     image: fencesserver
+    init: true      # https://www.kaggle.com/code/residentmario/best-practices-for-propagating-signals-on-docker/notebook
     build:
       context: .
       dockerfile: ./Dockerfile
@@ -12,3 +13,4 @@ services:
       - 80:80
       - 9229:9229
     command: ["node", "--inspect=0.0.0.0:9229", "app.js"]
+    restart: unless-stopped

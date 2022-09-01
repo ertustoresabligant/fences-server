@@ -3,7 +3,9 @@ version: '3.4'
 services:
   fencesserver:
     image: ghcr.io/glasfisch3000/fences-server:latest
+    init: true      # https://www.kaggle.com/code/residentmario/best-practices-for-propagating-signals-on-docker/notebook
     environment:
       NODE_ENV: production
     ports:
       - 80:80
+    restart: unless-stopped

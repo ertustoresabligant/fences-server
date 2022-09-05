@@ -52,24 +52,24 @@ class Database {
     }
   }
 
-  async createGame() {
+  async createGame(visible) {
     try {
-      console.log("[db] create game")
+      console.log("[db] create game ('" + visible + "')")
 
       const width = 5
       const height = 5
       var content = ""
       for(var i = 0; i < width*height + (width-1)*(height-1); i++) { content += "0" }
 
-      const game = await this.db.run("INSERT INTO Game (deleted, status, width, height, player0, player1, currentPlayer, content) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [false, this.Status.WAITING, width, height, undefined, undefined, false, content])
+      const game = await this.db.run("INSERT INTO Game (deleted, status, public, width, height, player0, player1, currentPlayer, content) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", [false, this.Status.WAITING, visible ? true : false, width, height, undefined, undefined, false, content])
       if(!game || !game.lastID) {
-        console.log("[db] create game: unable to create game")
+        console.log("[db] create game ('" + visible + "'): unable to create game")
         return false
       }
-      console.log("[db] create game: successfully created game")
+      console.log("[db] create game ('" + visible + "'): successfully created game")
       return game.lastID
     } catch(err) {
-      console.log("[db] create game: error: " + err)
+      console.log("[db] create game ('" + visible + "'): error: " + err)
       return false
     }
   }
@@ -228,6 +228,11 @@ class Database {
           return false
         }
       } else if(!game.player1) {
+        if(game.player0 == pID) {
+          console.log("[db] join game (game '" + gameID + "', player '" + playerID + "'): player already joined this game")
+          return false
+        }
+
         console.log("[db] join game (game '" + gameID + "', player '" + playerID + "'): setting player 1")
         const res = await this.db.run("UPDATE Game SET player1 = ?, status = ? WHERE gameID = ?", [pID, this.Status.RUNNING, gID])
         if(res) {
@@ -243,6 +248,46 @@ class Database {
       }
     } catch(err) {
       console.log("[db] join game (game '" + gameID + "', player '" + playerID + "'): error: " + err)
+      return false
+    }
+  }
+
+  async findGame(playerID) {
+    try {
+      console.log("[db] find game ('" + playerID + "')")
+
+      const id = validateID(playerID)
+      if(!id) return false
+
+      var game = await this.db.get("SELECT gameID, player0, player1 FROM Game WHERE deleted = ? AND status = ? AND public = ? AND NOT player0 = ?", [false, this.Status.WAITING, true, id])
+      if(game) {
+        console.log("[db] find game ('" + playerID + "'): found game: '" + game.gameID + "'")
+      } else {
+        console.log("[db] find game ('" + playerID + "'): no suitable game found, creating new one")
+        const gameID = await this.createGame(true)
+        if(gameID) {
+          console.log("[db] find game ('" + playerID + "'): created game: '" + gameID + "'")
+          game = await this.getGame(gameID)
+          if(!game) {
+            console.log("[db] find game ('" + playerID + "'): unable to find newly created game")
+            return false
+          }
+        } else {
+          console.log("[db] find game ('" + playerID + "'): unable to create game")
+          return false
+        }
+      }
+
+      const join = await this.joinGame(game.gameID, id)
+      if(!join) {
+        console.log("[db] find game ('" + playerID + "'): unable to join game")
+        return false
+      }
+
+      console.log("[db] find game ('" + playerID + "'): successfully joined game '" + game.gameID + "'")
+      return game.gameID
+    } catch(err) {
+      console.log("[db] find game ('" + playerID + "'): error: " + err)
       return false
     }
   }
@@ -285,7 +330,19 @@ class Database {
       const res = await this.db.run("UPDATE Game SET content = ?, currentPlayer = ? WHERE gameID = ?", [newGameContent, !game.currentPlayer, id])
       if(res) {
         console.log("[db] set field (game '" + gameID + "', x '" + X + "', y '" + Y + "'): successfully updated game")
-        return true
+
+        var returnValue = true
+        returnValue.winner = Game.getWinner(gameContent)
+
+        if(returnValue.winner) {
+          console.log("[db] set field (game '" + gameID + "', x '" + X + "', y '" + Y + "'): game is finished")
+          const res2 = await this.db.run("UPDATE Game SET status = ? WHERE gameID = ?", [this.Status.FINISHED, id])
+          if(!res2) {
+            console.log("[db] set field (game '" + gameID + "', x '" + X + "', y '" + Y + "'): unable to mark game as finished")
+          }
+        }
+
+        return returnValue
       } else {
         console.log("[db] set field (game '" + gameID + "', x '" + X + "', y '" + Y + "'): unable to update game")
         return false

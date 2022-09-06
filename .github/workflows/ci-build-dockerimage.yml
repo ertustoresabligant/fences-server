@@ -13,6 +13,9 @@ on:
         description: "Docker Image Tag"
         required: true
         default: "latest"
+  push:
+    tags:
+      - 'v*.*.*'
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -30,7 +33,14 @@ jobs:
         with:
           token: ${{ secrets.GHCR_PAT }}
           submodules: true
-        
+
+      - name: Set env
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+      - name: Test
+        run: |
+          echo $RELEASE_VERSION
+          echo ${{ env.RELEASE_VERSION }}
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
 
@@ -52,4 +62,4 @@ jobs:
           platforms: linux/amd64,linux/arm64, linux/arm/v7
           push: true
           tags: |
-            ghcr.io/ertustoresabligant/fences-server:${{ github.event.inputs.tag }} , ghcr.io/ertustoresabligant/fences-server:latest
+            ghcr.io/ertustoresabligant/fences-server:${{ env.RELEASE_VERSION }} , ghcr.io/ertustoresabligant/fences-server:latest

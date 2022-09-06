@@ -21,7 +21,7 @@ require(__dirname + "/../database.js")().then(async db => {
   console.log(join1)
   if(!join1) return
 
-  var join2 = await db.joinGame(game1ID, player1ID)
+  var join2 = await db.joinGame(game1ID, player2ID)
   console.log(join2)
   if(!join2) return
 

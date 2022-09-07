@@ -4,6 +4,9 @@ server.use(require("body-parser").urlencoded({ extended: false }))
 const http = require("http").Server(server)
 const port = process.env.PORT || 3141
 
+const crypto = require(__dirname + "/crypto.js")
+console.log(crypto.export())
+
 console.log("[app-setup] successfully imported modules, ready to start server")
 console.log("[app-setup] connecting to database...")
 

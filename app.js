@@ -237,7 +237,7 @@ require(__dirname + "/database.js")().then(db => {
     const player = await db.joinGame(gID, pID)
     if(player) {
       console.log("[express] /fences/game/join: successfully joined game")
-      res.status(200).json({ gameID: gID, playerID: pID, player: player })
+      res.status(200).json({ gameID: gID, playerID: pID, player: player-1 })
     } else if(player === undefined) {
       console.log("[express] /fences/game/join: unable to join (400)")
       res.status(400).send("")

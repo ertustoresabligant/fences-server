@@ -261,7 +261,7 @@ class Database {
         const res = await this.db.run("UPDATE Game SET player0 = ? WHERE gameID = ?", [pID, gID])
         if(res) {
           console.log("[db] join game (game '" + gameID + "', player '" + playerID + "'): successfully set player 0")
-          return true
+          return 1
         } else {
           console.log("[db] join game (game '" + gameID + "', player '" + playerID + "'): unable to set player 0")
           return null
@@ -276,7 +276,7 @@ class Database {
         const res = await this.db.run("UPDATE Game SET player1 = ?, status = ? WHERE gameID = ?", [pID, this.Status.RUNNING, gID])
         if(res) {
           console.log("[db] join game (game '" + gameID + "', player '" + playerID + "'): successfully set player 1")
-          return true
+          return 2
         } else {
           console.log("[db] join game (game '" + gameID + "', player '" + playerID + "'): unable to set player 1")
           return null
@@ -324,7 +324,7 @@ class Database {
       }
 
       console.log("[db] find game ('" + playerID + "'): successfully joined game '" + game.gameID + "'")
-      return game.gameID
+      return { gameID: game.gameID, player: join-1 }
     } catch(err) {
       console.log("[db] find game ('" + playerID + "'): error: " + err)
       return null

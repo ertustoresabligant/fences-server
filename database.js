@@ -64,8 +64,8 @@ class Database {
     try {
       console.log("[db] create game ('" + visible + "')")
 
-      const width = 2
-      const height = 2
+      const width = 5
+      const height = 5
       var content = ""
       for(var i = 0; i < width*height + (width-1)*(height-1); i++) { content += "0" }
 

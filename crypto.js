@@ -7,23 +7,18 @@ class Session {
       modulusLength: 2048
     })
 
-    this.puk = keys.publicKey
-    this.prk = keys.privateKey
-
     this.encryptionSettings = {
-      key: this.puk,
-      padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-      oaepHash: "sha256"
+      key: keys.publicKey,
+      padding: crypto.constants.RSA_PKCS1_PADDING
     }
     this.decryptionSettings = {
-      key: this.prk,
-      padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-      oaepHash: "sha256"
+      key: keys.privateKey,
+      padding: crypto.constants.RSA_PKCS1_PADDING
     }
   }
 
   export() {
-    return this.puk.export({ type: "pkcs1", format: "der" })
+    return this.encryptionSettings.key.export({ type: "spki", format: "der" })
   }
 
   decrypt(buffer) {
@@ -31,29 +26,58 @@ class Session {
   }
 
   decryptString(buffer) {
-    return decrypt(buffer).toString()
+    return this.decrypt(buffer).toString()
   }
 
   checkDecrypt(buffer) {
     let keysFile
     try {
-      keysFile = fs.readFileSync(__dirname + "/private/admin-keys.json", { encoding: "utf8" })
+      keysFile = fs.readFileSync(__dirname + "/data/private/admin-keys.json", { encoding: "utf8" })
     } catch(err) {}
 
     const keys = JSON.parse(keysFile.length<1 ? '[]' : keysFile)
-    const decrypt = decryptString(buffer)
+    const decrypt = this.decryptString(buffer)
     return keys.find(element => element && element.key && element.key === decrypt) && true
   }
 }
 
-var session
-try {
-  //session = JSON.parse(fs.readFileSync(__dirname + "/private/crypto-session.json", { encoding: "utf8" }))
-} catch(err) {}
+module.exports = {
+  timeout: 30000,
 
-if(!session) {
-  session = new Session()
-  fs.writeFileSync(__dirname + "/private/crypto-session.json", JSON.stringify(session))
+  sessions: { },
+
+  generate() {
+    const id = crypto.randomUUID()
+    var session = new Session()
+    session.timestamp = new Date().getTime()
+    session.id = id
+    module.exports.sessions[id] = session
+    return session
+  },
+
+  validate(id, data) {
+    if(!id) return null
+    if(typeof id !== "string") return null
+
+    const session = module.exports.sessions[id]
+    if(!session) return undefined
+
+    return session.checkDecrypt(data)
+  },
+
+  remove(id) {
+    if(!id) return null
+    if(typeof id !== "string") return null
+    delete module.exports.sessions[id]
+    return true
+  },
+
+  checkAll() {
+    Object.keys(module.exports.sessions).forEach(id => {
+      const session = module.exports.sessions[id]
+      if(session && session.timestamp && session.timestamp < new Date().getTime()-module.exports.timeout) delete module.exports.sessions[id]
+    })
+  }
 }
 
-module.exports = session
+setInterval(module.exports.checkAll, 1000)

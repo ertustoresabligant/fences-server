@@ -5,7 +5,6 @@ const http = require("http").Server(server)
 const port = process.env.PORT || 3141
 
 const crypto = require(__dirname + "/crypto.js")
-console.log(crypto.export())
 
 console.log("[app-setup] successfully imported modules, ready to start server")
 console.log("[app-setup] connecting to database...")
@@ -30,8 +29,8 @@ require(__dirname + "/database.js")().then(db => {
       console.log("[express] /fences/get: unable to fetch games (404)")
       res.status(404).send("")
     } else {
-      console.log("[express] /fences/get: unable to fetch games (502)")
-      res.status(502).send("")
+      console.log("[express] /fences/get: unable to fetch games (500)")
+      res.status(500).send("")
     }
   })
 
@@ -271,6 +270,229 @@ require(__dirname + "/database.js")().then(db => {
       res.status(400).send("")
     } else {
       console.log("[express] /fences/game/find: unable to find (500)")
+      res.status(500).send("")
+    }
+  })
+
+  server.get("/fences/key", async (req, res) => {
+    console.log("[express] /fences/key")
+
+    const session = crypto.generate()
+    res.status(200).json({ sessionID: session.id, puk: session.export().toJSON().data.join("-") })
+  })
+
+  server.get("/fences/get-all", async (req, res) => {
+    console.log("[express] /fences/get-all")
+
+    const sessionID = req.query.sessionID
+    if(sessionID && typeof sessionID == "string" && sessionID.length > 0) {
+      console.log("[express] /fences/get-all: validated session id ('" + sessionID + "')")
+    } else {
+      console.log("[express] /fences/get-all: invalid session id ('" + sessionID + "')")
+      res.status(401).send("")
+      return
+    }
+
+    const key = req.query.key
+    if(key && typeof key == "string" && key.length > 0) {
+      console.log("[express] /fences/get-all: validated key ('" + key + "')")
+    } else {
+      console.log("[express] /fences/get-all: invalid key ('" + key + "')")
+      res.status(401).send("")
+      return
+    }
+
+    try {
+      const array = key.split(",").map(str => parseInt(str))
+      if(!array || array.length < 1) {
+        console.log("[express] /fences/get-all: invalid key array")
+        res.status(401).send("")
+        return
+      }
+
+      const buffer = new Int8Array(array).buffer
+      if(!buffer) {
+        console.log("[express] /fences/get-all: unable to create buffer")
+        res.status(500).send("")
+        return
+      }
+
+      const valid = crypto.validate(sessionID, buffer)
+      if(!valid) {
+        console.log("[express] /fences/get-all: unauthorized")
+        res.status(403).send("")
+        return
+      }
+      const remove = crypto.remove(sessionID)
+      if(remove) {
+        console.log("[express] /fences/get-all: successfully removed key")
+      } else {
+        console.log("[express] /fences/get-all: unable to remove key")
+        res.status(500).send("")
+        return
+      }
+
+      console.log("[express] /fences/get-all: authorized")
+      var games = await db.getAllGames()
+      if(games) {
+        console.log("[express] /fences/get-all: successfully fetched games")
+        res.status(200).json(games)
+      } else if(games === undefined) {
+        console.log("[express] /fences/get-all: unable to fetch games (404)")
+        res.status(404).send("")
+      } else {
+        console.log("[express] /fences/get-all: unable to fetch games (500)")
+        res.status(500).send("")
+      }
+    } catch(err) {
+      console.log("[express] /fences/get-all: error: " + err)
+      res.status(500).send("")
+    }
+  })
+
+  server.get("/fences/delete-all", async (req, res) => {
+    console.log("[express] /fences/delete-all")
+
+    const sessionID = req.query.sessionID
+    if(sessionID && typeof sessionID == "string" && sessionID.length > 0) {
+      console.log("[express] /fences/delete-all: validated session id ('" + sessionID + "')")
+    } else {
+      console.log("[express] /fences/delete-all: invalid session id ('" + sessionID + "')")
+      res.status(401).send("")
+      return
+    }
+
+    const key = req.query.key
+    if(key && typeof key == "string" && key.length > 0) {
+      console.log("[express] /fences/delete-all: validated key ('" + key + "')")
+    } else {
+      console.log("[express] /fences/delete-all: invalid key ('" + key + "')")
+      res.status(401).send("")
+      return
+    }
+
+    try {
+      const array = key.split(",").map(str => parseInt(str))
+      if(!array || array.length < 1) {
+        console.log("[express] /fences/delete-all: invalid key array")
+        res.status(401).send("")
+        return
+      }
+
+      const buffer = new Int8Array(array).buffer
+      if(!buffer) {
+        console.log("[express] /fences/delete-all: unable to create buffer")
+        res.status(500).send("")
+        return
+      }
+
+      const valid = crypto.validate(sessionID, buffer)
+      if(!valid) {
+        console.log("[express] /fences/delete-all: unauthorized")
+        res.status(403).send("")
+        return
+      }
+      const remove = crypto.remove(sessionID)
+      if(remove) {
+        console.log("[express] /fences/delete-all: successfully removed key")
+      } else {
+        console.log("[express] /fences/delete-all: unable to remove key")
+        res.status(500).send("")
+        return
+      }
+
+      console.log("[express] /fences/delete-all: authorized")
+      var result = await db.deleteAllGames()
+      if(result) {
+        console.log("[express] /fences/delete-all: successfully deleted games")
+        res.status(200).send("")
+      } else {
+        console.log("[express] /fences/delete-all: unable to delete games (500)")
+        res.status(500).send("")
+      }
+    } catch(err) {
+      console.log("[express] /fences/delete-all: error: " + err)
+      res.status(500).send("")
+    }
+  })
+
+  server.get("/fences/game/delete", async (req, res) => {
+    console.log("[express] /fences/game/delete")
+
+    const sessionID = req.query.sessionID
+    if(sessionID && typeof sessionID == "string" && sessionID.length > 0) {
+      console.log("[express] /fences/game/delete: validated session id ('" + sessionID + "')")
+    } else {
+      console.log("[express] /fences/game/delete: invalid session id ('" + sessionID + "')")
+      res.status(401).send("")
+      return
+    }
+
+    const key = req.query.key
+    if(key && typeof key == "string" && key.length > 0) {
+      console.log("[express] /fences/game/delete: validated key ('" + key + "')")
+    } else {
+      console.log("[express] /fences/game/delete: invalid key ('" + key + "')")
+      res.status(401).send("")
+      return
+    }
+
+    const gameID = validateID(req.query.gameID)
+    if(gameID) {
+      console.log("[express] /fences/game/delete: validated game id ('" + gameID + "')")
+    } else {
+      console.log("[express] /fences/game/delete: invalid game id ('" + req.query.gameID + "')")
+      res.status(400).send("")
+      return
+    }
+
+    try {
+      const array = key.split(",").map(str => parseInt(str))
+      if(!array || array.length < 1) {
+        console.log("[express] /fences/game/delete: invalid key array")
+        res.status(401).send("")
+        return
+      }
+
+      const buffer = new Int8Array(array).buffer
+      if(!buffer) {
+        console.log("[express] /fences/game/delete: unable to create buffer")
+        res.status(500).send("")
+        return
+      }
+
+      const valid = crypto.validate(sessionID, buffer)
+      if(!valid) {
+        console.log("[express] /fences/game/delete: unauthorized")
+        res.status(403).send("")
+        return
+      }
+      const remove = crypto.remove(sessionID)
+      if(remove) {
+        console.log("[express] /fences/game/delete: successfully removed key")
+      } else {
+        console.log("[express] /fences/game/delete: unable to remove key")
+        res.status(500).send("")
+        return
+      }
+
+      console.log("[express] /fences/game/delete: authorized")
+      var result = await db.deleteGame(gameID)
+      if(result) {
+        console.log("[express] /fences/game/delete: successfully deleted game")
+        res.status(200).json({ gameID: gameID })
+      } else if(result === false) {
+        console.log("[express] /fences/game/delete: unable to delete game (400)")
+        res.status(400).send("")
+      } else if(result === undefined) {
+        console.log("[express] /fences/game/delete: unable to delete game (404)")
+        res.status(404).send("")
+      } else {
+        console.log("[express] /fences/game/delete: unable to delete game (500)")
+        res.status(500).send("")
+      }
+    } catch(err) {
+      console.log("[express] /fences/game/delete: error: " + err)
       res.status(500).send("")
     }
   })

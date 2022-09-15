@@ -176,7 +176,7 @@ require(__dirname + "/database.js")().then(db => {
       res.status(400).send("")
       return
     } else if(player === undefined) {
-      console.log("[express] /fences/game/set-field: unable to fetch active player (404)")
+      console.log("[express] /fences/game/set-field: unable to fetch active player (403)")
       res.status(404).send("")
       return
     } else if(!player) {

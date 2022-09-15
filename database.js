@@ -1,4 +1,4 @@
-const Game = require(__dirname + "/game.js")
+const Game = require(__dirname + "/fences/game.js")
 const { validateID } = require(__dirname + "/lib.js")
 
 async function init() {
@@ -216,10 +216,10 @@ class Database {
 
       if(game.currentPlayer === 0) {
         console.log("[db] get active player ('" + gameID + "'): successfully fetched player 0")
-        return game.player0
+        return game.player0 || undefined
       } else if(game.currentPlayer === 1) {
         console.log("[db] get active player ('" + gameID + "'): successfully fetched player 1")
-        return game.player1
+        return game.player1 || undefined
       }
 
       console.log("[db] get active player ('" + gameID + "'): unable to fetch player")

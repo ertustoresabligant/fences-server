@@ -18,6 +18,10 @@ require(__dirname + "/database.js")().then(db => {
     res.redirect("https://betterrickrollredirect.github.io/")
   })
 
+  server.get("/fences-server-search", (req, res) => {
+    res.send("v2.1.0");
+  })
+
   server.get("/fences/get", async (req, res) => {
     console.log("[express] /fences/get")
 

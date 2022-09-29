@@ -10,6 +10,7 @@ console.log("[app-setup] successfully imported modules, ready to start server")
 console.log("[app-setup] connecting to database...")
 
 const { validateID } = require(__dirname + "/lib.js")
+const { playerLose, validatePlayer } = require(__dirname + "/tournament.js")
 
 require(__dirname + "/database.js")().then(db => {
   //console.log("[app-setup] setup done")

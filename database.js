@@ -343,7 +343,7 @@ class Database {
       const y = validateID(Y)
       if(!y && y !== 0) return undefined
 
-      const game = await this.db.get("SELECT status, currentPlayer, width, height, content FROM Game WHERE gameID = ? AND deleted = ?", [id, false])
+      const game = await this.db.get("SELECT status, currentPlayer, player0, player1, width, height, content FROM Game WHERE gameID = ? AND deleted = ?", [id, false])
       if(!game) {
         console.log("[db] set field (game '" + gameID + "', x '" + X + "', y '" + Y + "'): unable to fetch game")
         return undefined
@@ -381,7 +381,7 @@ class Database {
           }
         }
 
-        return { winner: winner }
+        return { winner: winner, player0: game.player0, player1: game.player1 }
       } else {
         console.log("[db] set field (game '" + gameID + "', x '" + X + "', y '" + Y + "'): unable to update game")
         return null

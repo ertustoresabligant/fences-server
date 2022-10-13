@@ -1,3 +1,6 @@
+const args = require(__dirname + "/args.js")()
+console.log("[app-setup] starting server in " + (args.tournament ? "tournament" : "normal") + " mode")
+
 const express = require("express")
 const server = express()
 server.use(require("body-parser").urlencoded({ extended: false }))
@@ -10,11 +13,9 @@ console.log("[app-setup] successfully imported modules, ready to start server")
 console.log("[app-setup] connecting to database...")
 
 const { validateID } = require(__dirname + "/lib.js")
-const { playerLose, validatePlayer } = require(__dirname + "/tournament.js")
+const { playerLose, validatePlayer, startTournament, tournamentStarted } = require(__dirname + "/tournament.js")
 
 require(__dirname + "/database.js")().then(db => {
-  //console.log("[app-setup] setup done")
-
   server.get("/test", (req, res) => {
     res.redirect("https://betterrickrollredirect.github.io/")
   })
@@ -25,6 +26,12 @@ require(__dirname + "/database.js")().then(db => {
 
   server.get("/fences/get", async (req, res) => {
     console.log("[express] /fences/get")
+
+    if(args.tournament) {
+      console.log("[express] /fences/get: not allowed in tournament mode (403)")
+      res.status(403).send("")
+      return
+    }
 
     var games = await db.getPublicGames()
     if(games) {
@@ -41,6 +48,12 @@ require(__dirname + "/database.js")().then(db => {
 
   server.get("/fences/game/get", async (req, res) => {
     console.log("[express] /fences/game/get")
+
+    if(args.tournament && !tournamentStarted()) {
+      console.log("[express] /fences/game/get: tournament has not started (403)")
+      res.status(403).send("")
+      return
+    }
 
     const id = validateID(req.query.gameID)
     if(id) {
@@ -70,6 +83,12 @@ require(__dirname + "/database.js")().then(db => {
   server.get("/fences/game/create", async (req, res) => {
     console.log("[express] /fences/game/create")
 
+    if(args.tournament) {
+      console.log("[express] /fences/game/create: now allowed in tournament mode (403)")
+      res.status(403).send("")
+      return
+    }
+
     const visible = req.query["public"]
     console.log("[express] /fences/game/create: " + (visible ? "visible" : "invisible"))
 
@@ -95,9 +114,10 @@ require(__dirname + "/database.js")().then(db => {
       return
     }
 
-    const player = await db.getPlayer(id)
+    var player = await db.getPlayer(id)
     if(player) {
       console.log("[express] /fences/player/get: successfully fetched player")
+      if(!validatePlayer(id)) player.blacklisted = true
       res.status(200).json(player)
     } else if(player === false) {
       console.log("[express] /fences/player/get: unable to fetch player (400)")
@@ -113,6 +133,12 @@ require(__dirname + "/database.js")().then(db => {
 
   server.get("/fences/player/create", async (req, res) => {
     console.log("[express] /fences/player/create")
+
+    if(args.tournament && tournamentStarted()) {
+      console.log("[express] /fences/player/create: tournament has already started (403)")
+      res.status(403).send("")
+      return
+    }
 
     const name = req.query.name
     if(name && typeof name == "string" && name.length > 0) {
@@ -139,6 +165,12 @@ require(__dirname + "/database.js")().then(db => {
   server.get("/fences/game/set-field", async (req, res) => {
     console.log("[express] /fences/game/set-field")
 
+    if(args.tournament && !tournamentStarted()) {
+      console.log("[express] /fences/game/set-field: tournament has not started (403)")
+      res.status(403).send("")
+      return
+    }
+
     const gID = validateID(req.query.gameID)
     if(gID) {
       console.log("[express] /fences/game/set-field: validated game id ('" + gID + "')")
@@ -154,6 +186,12 @@ require(__dirname + "/database.js")().then(db => {
     } else {
       console.log("[express] /fences/game/set-field: invalid player id ('" + req.query.playerID + "')")
       res.status(400).send("")
+      return
+    }
+
+    if(args.tournament && !validatePlayer(pID)) {
+      console.log("[express] /fences/game/set-field: player was blacklisted (403)")
+      res.status(403).send("blacklisted")
       return
     }
 
@@ -182,7 +220,7 @@ require(__dirname + "/database.js")().then(db => {
       return
     } else if(player === undefined) {
       console.log("[express] /fences/game/set-field: unable to fetch active player (403)")
-      res.status(404).send("")
+      res.status(403).send("")
       return
     } else if(!player) {
       console.log("[express] /fences/game/set-field: unable to fetch active player (500)")
@@ -201,6 +239,15 @@ require(__dirname + "/database.js")().then(db => {
 
       if(result.winner) {
         console.log("[express] /fences/game/set-field: game was won: '" + result.winner + "'")
+
+        const loser = result.winner == 1 ? game.player0 : result.winner == 2 ? game.player1 : 0
+        if(loser) {
+          console.log("[express] /fences/game/set-field: player '" + loser + "' lost")
+          playerLose(loser)
+        } else {
+          console.log("[express] /fences/game/set-field: unable to identify the loser (winner: '" + result.winner + "', loser: '" + loser + "')")
+        }
+
         res.status(200).json({ gameID: gID, winner: result.winner })
       } else {
         res.status(200).json({ gameID: gID })
@@ -220,6 +267,12 @@ require(__dirname + "/database.js")().then(db => {
   server.get("/fences/game/join", async (req, res) => {
     console.log("[express] /fences/game/join")
 
+    if(args.tournament) {
+      console.log("[express] /fences/game/join: not allowed in tournament mode (403)")
+      res.status(403).send("")
+      return
+    }
+
     const gID = validateID(req.query.gameID)
     if(gID) {
       console.log("[express] /fences/game/join: validated game id ('" + gID + "')")
@@ -235,6 +288,12 @@ require(__dirname + "/database.js")().then(db => {
     } else {
       console.log("[express] /fences/game/join: invalid player id ('" + req.query.playerID + "')")
       res.status(400).send("")
+      return
+    }
+
+    if(args.tournament && !validatePlayer(pID)) {
+      console.log("[express] /fences/game/join: player was blacklisted (403)")
+      res.status(403).send("blacklisted")
       return
     }
 
@@ -257,12 +316,24 @@ require(__dirname + "/database.js")().then(db => {
   server.get("/fences/game/find", async (req, res) => {
     console.log("[express] /fences/game/find")
 
+    if(args.tournament && !tournamentStarted()) {
+      console.log("[express] /fences/game/find: tournament has not started (403)")
+      res.status(403).send("")
+      return
+    }
+
     const id = validateID(req.query.playerID)
     if(id) {
       console.log("[express] /fences/game/find: validated id ('" + id + "')")
     } else {
       console.log("[express] /fences/game/find: invalid id ('" + req.query.playerID + "')")
       res.status(400).send("")
+      return
+    }
+
+    if(args.tournament && !validatePlayer(id)) {
+      console.log("[express] /fences/game/find: player was blacklisted (403)")
+      res.status(403).send("blacklisted")
       return
     }
 
@@ -498,6 +569,67 @@ require(__dirname + "/database.js")().then(db => {
       }
     } catch(err) {
       console.log("[express] /fences/game/delete: error: " + err)
+      res.status(500).send("")
+    }
+  })
+
+  server.get("/fences/tournament/start", async (req, res) => {
+    console.log("[express] /fences/tournament/start")
+
+    const sessionID = req.query.sessionID
+    if(sessionID && typeof sessionID == "string" && sessionID.length > 0) {
+      console.log("[express] /fences/tournament/start: validated session id ('" + sessionID + "')")
+    } else {
+      console.log("[express] /fences/tournament/start: invalid session id ('" + sessionID + "')")
+      res.status(401).send("")
+      return
+    }
+
+    const key = req.query.key
+    if(key && typeof key == "string" && key.length > 0) {
+      console.log("[express] /fences/tournament/start: validated key ('" + key + "')")
+    } else {
+      console.log("[express] /fences/tournament/start: invalid key ('" + key + "')")
+      res.status(401).send("")
+      return
+    }
+
+    try {
+      const array = key.split(",").map(str => parseInt(str))
+      if(!array || array.length < 1) {
+        console.log("[express] /fences/tournament/start: invalid key array")
+        res.status(401).send("")
+        return
+      }
+
+      const buffer = new Int8Array(array).buffer
+      if(!buffer) {
+        console.log("[express] /fences/tournament/start: unable to create buffer")
+        res.status(500).send("")
+        return
+      }
+
+      const valid = crypto.validate(sessionID, buffer)
+      if(!valid) {
+        console.log("[express] /fences/tournament/start: unauthorized")
+        res.status(403).send("")
+        return
+      }
+      const remove = crypto.remove(sessionID)
+      if(remove) {
+        console.log("[express] /fences/tournament/start: successfully removed key")
+      } else {
+        console.log("[express] /fences/tournament/start: unable to remove key")
+        res.status(500).send("")
+        return
+      }
+
+      console.log("[express] /fences/tournament/start: authorized")
+      startTournament()
+      console.log("[express] /fences/tournament/start: successfully started tournament")
+      res.status(200).send("")
+    } catch(err) {
+      console.log("[express] /fences/tournament/start: error: " + err)
       res.status(500).send("")
     }
   })

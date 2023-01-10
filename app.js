@@ -5,7 +5,7 @@ const express = require("express")
 const server = express()
 server.use(require("body-parser").urlencoded({ extended: false }))
 const http = require("http").Server(server)
-const port = process.env.PORT || 3141
+const port = process.env.PORT || 3142
 
 const crypto = require(__dirname + "/crypto.js")
 
@@ -29,7 +29,7 @@ require(__dirname + "/database.js")().then(db => {
 
     if(args.tournament) {
       console.log("[express] /fences/get: not allowed in tournament mode (403)")
-      res.status(403).send("")
+      res.status(403).send("tournament")
       return
     }
 
@@ -51,7 +51,7 @@ require(__dirname + "/database.js")().then(db => {
 
     if(args.tournament && !tournamentStarted()) {
       console.log("[express] /fences/game/get: tournament has not started (403)")
-      res.status(403).send("")
+      res.status(403).send("tournament")
       return
     }
 
@@ -85,7 +85,7 @@ require(__dirname + "/database.js")().then(db => {
 
     if(args.tournament) {
       console.log("[express] /fences/game/create: now allowed in tournament mode (403)")
-      res.status(403).send("")
+      res.status(403).send("tournament")
       return
     }
 
@@ -136,7 +136,7 @@ require(__dirname + "/database.js")().then(db => {
 
     if(args.tournament && tournamentStarted()) {
       console.log("[express] /fences/player/create: tournament has already started (403)")
-      res.status(403).send("")
+      res.status(403).send("tournament")
       return
     }
 
@@ -167,7 +167,7 @@ require(__dirname + "/database.js")().then(db => {
 
     if(args.tournament && !tournamentStarted()) {
       console.log("[express] /fences/game/set-field: tournament has not started (403)")
-      res.status(403).send("")
+      res.status(403).send("tournament")
       return
     }
 
@@ -240,7 +240,7 @@ require(__dirname + "/database.js")().then(db => {
       if(result.winner) {
         console.log("[express] /fences/game/set-field: game was won: '" + result.winner + "'")
 
-        const loser = result.winner == 1 ? game.player0 : result.winner == 2 ? game.player1 : 0
+        const loser = result.winner == 1 ? result.player0 : result.winner == 2 ? result.player1 : 0
         if(loser) {
           console.log("[express] /fences/game/set-field: player '" + loser + "' lost")
           playerLose(loser)
@@ -269,7 +269,7 @@ require(__dirname + "/database.js")().then(db => {
 
     if(args.tournament) {
       console.log("[express] /fences/game/join: not allowed in tournament mode (403)")
-      res.status(403).send("")
+      res.status(403).send("tournament")
       return
     }
 
@@ -318,7 +318,7 @@ require(__dirname + "/database.js")().then(db => {
 
     if(args.tournament && !tournamentStarted()) {
       console.log("[express] /fences/game/find: tournament has not started (403)")
-      res.status(403).send("")
+      res.status(403).send("tournament")
       return
     }
 

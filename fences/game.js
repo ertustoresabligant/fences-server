@@ -31,6 +31,9 @@ function getWinner(game) {
     }
   }
 
+  console.log(game)
+  console.log(board)
+
   var nodes = []
   for(var x = 0; x<boardWidth; x+=2) {
     if(board[0][x].value === 1) nodes.push(board[0][x])

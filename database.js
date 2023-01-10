@@ -372,6 +372,8 @@ class Database {
         console.log("[db] set field (game '" + gameID + "', x '" + X + "', y '" + Y + "'): successfully updated game")
 
         const winner = Game.getWinner(gameContent)
+        console.log("winner:")
+        console.log(winner)
 
         if(winner) {
           console.log("[db] set field (game '" + gameID + "', x '" + X + "', y '" + Y + "'): game is finished")

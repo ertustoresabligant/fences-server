@@ -1,17 +1,26 @@
 var blacklist = []
+var whitelist = []
 var started = false
+var playersFirstResponseDeadline = undefined
 
 function playerLose(playerID) {
   blacklist.push(playerID)
 }
 
 function validatePlayer(playerID) {
-  return !blacklist.includes(playerID)
+  return whitelist.includes(playerID) && !blacklist.includes(playerID)
+}
+
+function activatePlayer(playerID) {
+  if(!started) return undefined
+  if(new Date().getTime() > playersFirstResponseDeadline) return null
+  
 }
 
 function startTournament() {
   if(started) return false
   started = true
+  playersFirstResponseDeadline = new Date().getTime() + 2000
   return true
 }
 

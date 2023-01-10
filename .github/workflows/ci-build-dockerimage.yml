@@ -46,4 +46,4 @@ jobs:
           # platforms: linux/amd64,linux/arm64, linux/arm/v7
           push: true
           tags: |
-            ghcr.io/ertustoresabligant/fences-server:${{ env.RELEASE_VERSION }} , ghcr.io/ertustoresabligant/fences-server:latest
+            ghcr.io/ertustoresabligant/fences-server:${{ github.event.inputs.tag }} , ghcr.io/ertustoresabligant/fences-server:latest

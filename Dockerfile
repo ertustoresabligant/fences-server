@@ -1,9 +1,16 @@
-FROM node:latest
-ENV NODE_ENV=production
-WORKDIR /usr/src/app
-COPY ["package.json", "package-lock.json*", "npm-shrinkwrap.json*", "./"]
-RUN npm install --production --silent && mv node_modules ../
+FROM mhart/alpine-node:latest
+
+# If possible, run your container using `docker run --init`
+# Otherwise, you can use `tini`:
+# RUN apk add --no-cache tini
+# ENTRYPOINT ["/sbin/tini", "--"]
+
+WORKDIR /app
 COPY . .
-RUN chown -R node /usr/src/app
-USER node
+
+# If you have native dependencies, you'll need extra tools
+# RUN apk add --no-cache make gcc g++ python3
+
+RUN npm ci --prod
+
 CMD ["node", "app.js"]

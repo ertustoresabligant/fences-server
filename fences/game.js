@@ -25,7 +25,7 @@ function getWinner(game) {
         if(x%2 === 0) board[y].push({ value: game[boardWidth*y/2 + x/2], checked1: false, checked2: false, x: x, y: y })
         else board[y].push({ value: 2, checked1: false, checked2: false, x: x, y: y })
       } else {
-        if(x%2 === 1) board[y].push({ value: game[boardWidth*(y-1)/2 + game.width + (x-1)%2], checked1: false, checked2: false, x: x, y: y })
+        if(x%2 === 1) board[y].push({ value: game[boardWidth*(y-1)/2 + game.width + (x-1)/2], checked1: false, checked2: false, x: x, y: y })
         else board[y].push({ value: 1, checked1: false, checked2: false, x: x, y: y })
       }
     }
